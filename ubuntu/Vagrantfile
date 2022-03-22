@@ -1,0 +1,33 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+
+Vagrant.configure("2") do |config|
+
+  config.vm.box = "ubuntu/impish64"
+
+  config.vm.network "forwarded_port", guest: 8080, host: 8080
+
+  config.vm.synced_folder "src/", "/srv/website", disabled: true  # Disable default shared folder
+  config.vm.synced_folder "..", "/data"                      # Share project with VM
+
+  config.vm.provider "virtualbox" do |vb|
+    #   # Display the VirtualBox GUI when booting the machine
+    #   vb.gui = true
+    #
+    # Customize the amount of memory on the VM:
+    vb.memory = "4096"
+    vb.cpus = 2
+    vb.customize ["modifyvm", :id, "--vram", "64"]
+
+    # Set the name of the VM to include path to Vagrant file so that it is possible to
+    # have multiple machinies running from diferent repos
+    vb.name = "dev-machine-ubuntu"
+  end
+
+  config.vm.provision "shell", inline: <<-SHELL
+     apt update
+     apt-get install -y ansible
+  SHELL
+
+end
