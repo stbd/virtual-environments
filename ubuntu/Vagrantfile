@@ -9,7 +9,8 @@ Vagrant.configure("2") do |config|
   config.vm.network "forwarded_port", guest: 8080, host: 8080
 
   config.vm.synced_folder "src/", "/srv/website", disabled: true  # Disable default shared folder
-  config.vm.synced_folder "..", "/data"                      # Share project with VM
+  config.vm.synced_folder "..", "/data"                           # Share project with VM
+  config.vm.synced_folder "../..", "/projects"                    # Share project with VM
 
   config.vm.provider "virtualbox" do |vb|
     #   # Display the VirtualBox GUI when booting the machine
