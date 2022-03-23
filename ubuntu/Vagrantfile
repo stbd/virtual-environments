@@ -28,6 +28,7 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", inline: <<-SHELL
      apt update
      apt-get install -y ansible
+     ansible-playbook -vv /data/ubuntu/vm.yml
   SHELL
 
 end
