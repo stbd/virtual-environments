@@ -9,6 +9,8 @@
           - "curl"
           - "gnupg"
           - "lsb-release"
+          - "dpkg"
+          - "tig"
 
     - become: yes
       shell: |
@@ -39,3 +41,8 @@
           - "docker-ce"
           - "docker-ce-cli"
           - "containerd.io"
+
+    - user:
+        name: vagrant
+        groups: docker
+        append: yes
