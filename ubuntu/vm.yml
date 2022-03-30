@@ -11,6 +11,8 @@
           - "lsb-release"
           - "dpkg"
           - "tig"
+          - "python3-pip"
+          - "python3.9-venv"
 
     - become: yes
       shell: |
