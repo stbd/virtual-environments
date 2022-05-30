@@ -16,10 +16,6 @@
           - "python3-pip"
           - "python3.9-venv"
 
-          # PostgreSQL dev
-          - "postgresql-common"
-          - "libpq-dev"
-
     - become: yes
       shell: |
         /usr/bin/bash
@@ -51,7 +47,7 @@
           - "containerd.io"
 
     - become: yes
-      shell:
+      shell: |
         curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
         chmod +x /usr/local/bin/docker-compose
       args:
@@ -62,3 +58,28 @@
         name: vagrant
         groups: docker
         append: yes
+
+    - become: yes
+      shell: |
+        set -euo pipefail
+
+        if [ -f /etc/apt/sources.list.d/pgdg.list ]; then
+            echo "Postgres 14 repo already configured"
+            exit 0
+        fi
+        echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+        wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+        apt-get update
+      args:
+        executable: /usr/bin/bash
+
+    - become: yes
+      apt:
+        name:
+          - 'postgresql-14'
+
+    - become: yes
+      service:
+        name: 'postgresql'
+        state: stopped
+        enabled: false
