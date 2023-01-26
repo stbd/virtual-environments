@@ -120,7 +120,6 @@
 
     - become: yes
       shell: |
-        /usr/bin/bash
         set -euo pipefail
 
         already_installed=1
@@ -131,6 +130,22 @@
         fi
         echo install yq
         wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
+      args:
+        executable: /usr/bin/bash
+
+    - become: yes
+      shell: |
+        set -euo pipefail
+
+        installed=1
+        which k3s || installed=0
+        if [ installed -eq 1 ]; then
+            echo "k3s already installed"
+            exit 0
+        fi
+        wget -O /tmp/k3s https://github.com/k3s-io/k3s/releases/download/v1.26.0%2Bk3s1/k3s
+        sudo install /tmp/k3s /usr/local/bin/k3s
+        rm /tmp/k3s
       args:
         executable: /usr/bin/bash
 
