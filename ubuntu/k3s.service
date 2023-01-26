@@ -1,0 +1,9 @@
+[Unit]
+Description=K3s
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/k3s server --write-kubeconfig-mode 644 --docker
+
+[Install]
+WantedBy=multi-user.target
