@@ -14,11 +14,14 @@
           - "dpkg"
           - "tig"
           - "python3-pip"
-          - "python3.9-venv"
+          - "python3.10-venv"
+
+          - "net-tools"  # netstat etc.
+          - "xpra"
+          # - "lightdm"
 
     - become: yes
       shell: |
-        /usr/bin/bash
         set -euo pipefail
 
         docker_installed=1
@@ -40,18 +43,48 @@
         executable: /usr/bin/bash
 
     - become: yes
+      shell: |
+        set -euo pipefail
+
+        installed=1
+        which az || installed=0
+        if [ $installed -eq 1 ]; then
+            echo "Azure tools already configued"
+            exit 0
+        fi
+
+        if [ ! -f /etc/apt/keyrings/microsoft.gpg ]; then
+            curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | sudo tee /etc/apt/keyrings/microsoft.gpg > /dev/null
+            chmod go+r /etc/apt/keyrings/microsoft.gpg
+        fi
+
+        if [ ! -f /etc/apt/sources.list.d/azure-cli.list ]; then
+            # https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt#no-package-for-your-distribution
+            # AZ_REPO=$(lsb_release -cs)
+            AZ_REPO=jammy
+            echo "deb [arch=`dpkg --print-architecture` signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" | sudo tee /etc/apt/sources.list.d/azure-cli.list
+        fi
+        sudo apt-get update
+      args:
+        executable: /usr/bin/bash
+
+    - become: yes
       apt:
         name:
           - "docker-ce"
           - "docker-ce-cli"
           - "containerd.io"
+          - "azure-cli"
 
     - become: yes
       shell: |
         curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
         chmod +x /usr/local/bin/docker-compose
+        # sudo vi /etc/docker/daemon.json
+        # { "max-concurrent-uploads": 1, "max-concurrent-downloads": 1 }
       args:
         creates: /usr/local/bin/docker-compose
+        executable: /usr/bin/bash
 
     - become: yes
       user:
@@ -61,6 +94,7 @@
 
     - become: yes
       shell: |
+        /usr/bin/bash
         set -euo pipefail
 
         if [ -f /etc/apt/sources.list.d/pgdg.list ]; then
@@ -83,3 +117,27 @@
         name: 'postgresql'
         state: stopped
         enabled: false
+
+    - become: yes
+      shell: |
+        /usr/bin/bash
+        set -euo pipefail
+
+        already_installed=1
+        which yq || already_installed=0
+        if [ $already_installed -eq 1 ]; then
+            echo "yq already installed"
+            exit 0
+        fi
+        echo install yq
+        wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
+      args:
+        executable: /usr/bin/bash
+
+    - become: yes
+      template:
+        src: k3s.service
+        dest: /etc/systemd/system/k3s.service
+
+    - become: yes
+      shell: systemctl daemon-reload
