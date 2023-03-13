@@ -15,6 +15,7 @@
           - "tig"
           - "python3-pip"
           - "python3.10-venv"
+          - "unzip"
 
           - "net-tools"  # netstat etc.
           - "xpra"
