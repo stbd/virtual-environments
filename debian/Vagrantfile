@@ -4,17 +4,13 @@
 
 Vagrant.configure("2") do |config|
 
-  username = "vagrant"
-  user_id = 1234
-  user_group_id = 1234
-
-  config.vm.box = "debian/contrib-jessie64"
+  config.vm.box = "debian/bullseye64"
 
   config.vm.network "forwarded_port", guest: 8080, host: 8080
 
   # Share project with VM
-  config.vm.synced_folder ".", "/home/#{username}/mount"
-  config.vm.synced_folder "../data", "/home/#{username}/data"
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+  config.vm.synced_folder "../..", "/projects"
 
   # Provider-specific configuration so you can fine-tune various
   # backing providers for Vagrant. These expose provider-specific options.
@@ -25,32 +21,30 @@ Vagrant.configure("2") do |config|
     #   vb.gui = true
     #
     # Customize the amount of memory on the VM:
-    vb.memory = "4096"
-    vb.cpus = 2
-    vb.customize ["modifyvm", :id, "--vram", "64"]
+    vb.memory = "8192"
+    vb.cpus = 4
+    vb.customize ["modifyvm", :id, "--vram", "128"]
 
     # Set the name of the VM to include path to Vagrant file so that it is possible to
     # have multiple machinies running from diferent repos
-    vb.name = "dev-machine"
+    vb.name = "dev-machine-debian"
   end
 
   # Install puppet on VM
   config.vm.provision "shell", inline: <<-SHELL
-     apt-get update
-     apt-get install -y puppet
+     ansible_installed=1
+     command -v ansible || ansible_installed=0
+     if [ $ansible_installed -eq 0 ]; then
+         apt update
+         apt install -y gnupg
+         echo "deb http://ppa.launchpad.net/ansible/ansible/ubuntu focal main" > /etc/apt/sources.list.d/ubuntu-ansible.list
+         sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 93C4A3FD7BB9C367
+         apt update
+         apt install -y ansible
+     else
+         echo "Ansible already installed"
+     fi
+     ansible-playbook -vv /projects/virtual-environments/debian/vm.yml
   SHELL
 
-  config.vm.provision "puppet" do |puppet|
-    puppet.facter = {
-      "user" => "#{username}",
-      "user_id" => "#{user_id}",
-      "user_group_id" => "#{user_group_id}",
-    }
-
-    puppet.manifests_path = "manifests"
-    puppet.manifest_file = "default.pp"
-
-    # Uncomment to debug
-    # puppet.options = "--verbose --debug"
-  end
 end

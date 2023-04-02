@@ -1,0 +1,105 @@
+---
+- hosts: localhost
+  tasks:
+    - shell: echo linux-headers-$(uname -r)
+      register: linux_headers_package
+
+    - become: yes
+      apt:
+        name:
+          - "emacs"
+          - "curl"
+          - "jq"
+          - "git"
+          - "tig"
+          - "gnupg"
+          - 'build-essential'
+          - "net-tools"  # netstat etc.
+          - "xpra"
+
+          # Chrome dependencies
+          - 'fonts-liberation'
+          - 'libu2f-udev'
+          - 'libnss3'
+          - 'libnspr4'
+          - 'xdg-utils'
+          - 'libgbm1'
+          - 'libwayland-server0'
+
+          # Virtualbox additions
+          - "{{ linux_headers_package.stdout }}"
+
+    - name: "Test if xfce is installed"
+      shell: dpkg -l | grep -iw xfce
+      register: xfce_test
+      ignore_errors: True
+
+    - name: "Install xcfe"
+      block:
+        - apt:
+            name: task-xfce-desktop
+          ignore_errors: True
+
+        - name: "Reinstall plymouth (this seems to fix issue with xfce installation)"
+          shell: apt purge -y --reinstall plymouth
+
+      when: xfce_test.stdout == ""
+      become: yes
+
+    - name: "Test if chrome is installed"
+      shell: dpkg -l | grep -i google-chrome-stable
+      register: chrome_test
+      ignore_errors: True
+
+    - name: "Install chrome"
+      block:
+        - get_url:
+            dest: /tmp/chrome.dep
+            url: https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+
+        - shell: dpkg -i /tmp/chrome.dep
+          become: yes
+
+        - file:
+            path: /tmp/chrome.dep
+            state: absent
+
+      when: chrome_test.stdout == ""
+
+    - name: "Test if Docker is installed"
+      shell: dpkg -l | grep -i docker
+      register: docker_test
+      ignore_errors: True
+
+    - name: "Install docker"
+      block:
+
+        - become: yes
+          shell: |
+            set -euo pipefail
+
+            mkdir -m 0755 -p /etc/apt/keyrings
+            if [ ! -f /etc/apt/keyrings/docker.gpg ]; then
+                curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+            fi
+
+            if [ ! -f /etc/apt/sources.list.d/docker.list ]; then
+                echo \
+                "deb [arch=\"$(dpkg --print-architecture)\" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
+                "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+                sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+            fi
+            apt-get update
+          args:
+            executable: /usr/bin/bash
+
+        - become: yes
+          apt:
+            name:
+              - 'docker-ce'
+              - 'docker-ce-cli'
+              - 'containerd.io'
+              - 'docker-buildx-plugin'
+              - 'docker-compose-plugin'
+
+      when: docker_test.stdout == ""
