@@ -16,6 +16,7 @@
           - 'build-essential'
           - "net-tools"  # netstat etc.
           - "xpra"
+          - "dos2unix"
 
           # Chrome dependencies
           - 'fonts-liberation'
